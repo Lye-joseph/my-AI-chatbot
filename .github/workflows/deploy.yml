@@ -1,0 +1,57 @@
+name: Deploy Chatbot to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Replace API key in HTML files
+        run: |
+          # index.html 파일이 있다면 API 키 교체
+          if [ -f "index.html" ]; then
+            sed -i "s/YOUR_API_KEY_PLACEHOLDER/${{ secrets.OPEN_AI_KEY }}/g" index.html
+          fi
+          
+          # assistant-rag.html 파일이 있다면 API 키 교체
+          if [ -f "assistant-rag.html" ]; then
+            sed -i "s/YOUR_API_KEY_PLACEHOLDER/${{ secrets.OPEN_AI_KEY }}/g" assistant-rag.html
+          fi
+          
+          # ready-chatbot.html 파일이 있다면 API 키 교체
+          if [ -f "ready-chatbot.html" ]; then
+            sed -i "s/YOUR_API_KEY_PLACEHOLDER/${{ secrets.OPEN_AI_KEY }}/g" ready-chatbot.html
+          fi
+          
+          # 모든 .html 파일에서 API 키 교체 (전체 적용)
+          find . -name "*.html" -type f -exec sed -i "s/YOUR_API_KEY_PLACEHOLDER/${{ secrets.OPEN_AI_KEY }}/g" {} \;
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
